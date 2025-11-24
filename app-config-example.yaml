@@ -1,0 +1,39 @@
+server:
+  port: "8080"
+
+database:
+  host: "localhost"
+  port: "3306"
+  user: "root"
+  password: "password"
+  dbname: "cinestream"
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  host: "localhost"
+  port: "6379"
+  password: ""
+  db: 0
+
+queue:
+  name: "cinestream_transcoding_jobs"
+  max_retries: 3
+
+minio:
+  endpoint: "localhost:9000"
+  access_key_id: "minioadmin"
+  secret_access_key: "minioadmin"
+  use_ssl: false
+  bucket_raw: "raw-videos"
+  bucket_processed: "processed-videos"
+
+jwt:
+  secret_key: "jwtsecretkey"
+  access_token_expiry: "1h"
+  refresh_token_expiry: "7d"
+
+payment_gateway:
+  server_key: ""
+  client_key: ""
+  is_production: false
