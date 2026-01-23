@@ -41,7 +41,7 @@ func (p *JobProcessor) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Job processor stopped")
+			log.Println("Job processor received shutdown signal")
 			return ctx.Err()
 		default:
 			// Consume job from queue (blocking call with timeout)
@@ -49,6 +49,7 @@ func (p *JobProcessor) Start(ctx context.Context) error {
 			if err != nil {
 				// Check if context was cancelled
 				if ctx.Err() != nil {
+					log.Println("Context cancelled, stopping processor")
 					return ctx.Err()
 				}
 				log.Printf("Error consuming job: %v", err)
@@ -56,13 +57,18 @@ func (p *JobProcessor) Start(ctx context.Context) error {
 			}
 
 			if job == nil {
-				// No job available (timeout), continue
+				// No job available (timeout), continue to check context again
 				continue
 			}
 
 			// Process the job
 			log.Printf("Processing job for movie ID: %d", job.MovieID)
 			if err := p.processJob(ctx, job); err != nil {
+				// Check if error is due to context cancellation
+				if ctx.Err() != nil {
+					log.Printf("Job processing interrupted for movie %d: %v", job.MovieID, ctx.Err())
+					return ctx.Err()
+				}
 				log.Printf("Error processing job for movie %d: %v", job.MovieID, err)
 			}
 		}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -56,9 +57,18 @@ func (q *RedisQueue) PublishTranscodingJob(ctx context.Context, movieID int64, r
 func (q *RedisQueue) ConsumeTranscodingJob(ctx context.Context) (*TranscodingJob, error) {
 	queueName := "transcoding:jobs"
 
-	// Blocking pop from Redis list
-	result, err := q.client.BRPop(ctx, 0, queueName).Result()
+	// Use shorter timeout (5 seconds) instead of blocking forever
+	// This allows the context cancellation to be checked more frequently
+	result, err := q.client.BRPop(ctx, 5*time.Second, queueName).Result()
 	if err != nil {
+		// Check if it's just a timeout (no job available)
+		if err == redis.Nil {
+			return nil, nil // No job available, return nil
+		}
+		// Check if context was cancelled
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
 		return nil, fmt.Errorf("failed to pop job from queue: %w", err)
 	}
 
