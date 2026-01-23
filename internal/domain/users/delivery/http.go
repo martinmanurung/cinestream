@@ -7,6 +7,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/martinmanurung/cinestream/internal/domain/users"
 	"github.com/martinmanurung/cinestream/pkg/constant"
+	"github.com/martinmanurung/cinestream/pkg/middleware"
 	"github.com/martinmanurung/cinestream/pkg/response"
 )
 
@@ -31,14 +32,20 @@ func NewHandler(ctx context.Context, usecase UserUsecase) *Handler {
 }
 
 func (h *Handler) RegisterUser(c echo.Context) error {
+	logger := middleware.GetLogger(c)
 	ctx := h.ctx
+
+	logger.Info().Msg("Starting user registration")
+
 	var req users.UserRegisterRequest
 
 	if err := c.Bind(&req); err != nil {
+		logger.Error().Err(err).Msg("Failed to bind request")
 		return response.Error(c, http.StatusBadRequest, "invalid_request_body", err.Error())
 	}
 
 	if err := c.Validate(&req); err != nil {
+		logger.Warn().Err(err).Msg("Validation failed")
 		return response.Error(c, http.StatusBadRequest, "validation_failed", err.Error())
 	}
 
@@ -47,23 +54,36 @@ func (h *Handler) RegisterUser(c echo.Context) error {
 		var apiErr *response.APIError
 		if errors, ok := err.(*response.APIError); ok {
 			apiErr = errors
+			logger.Error().
+				Err(err).
+				Msg("Failed to register user")
 			return response.Error(c, apiErr.Code, apiErr.Message, apiErr.Details)
 		}
+		logger.Error().Err(err).Msg("Internal server error during registration")
 		return response.Error(c, http.StatusInternalServerError, "internal_server_error", err.Error())
 	}
+
+	logger.Info().
+		Msg("User registered successfully")
 
 	return response.Success(c, http.StatusCreated, "user_registered_successfully", result)
 }
 
 func (h *Handler) LoginUser(c echo.Context) error {
+	logger := middleware.GetLogger(c)
 	ctx := h.ctx
+
+	logger.Info().Msg("User login attempt")
+
 	var req users.UserLoginRequest
 
 	if err := c.Bind(&req); err != nil {
+		logger.Error().Err(err).Msg("Failed to bind login request")
 		return response.Error(c, http.StatusBadRequest, "invalid_request_body", err.Error())
 	}
 
 	if err := c.Validate(&req); err != nil {
+		logger.Warn().Err(err).Msg("Login validation failed")
 		return response.Error(c, http.StatusBadRequest, "validation_failed", err.Error())
 	}
 
@@ -72,10 +92,16 @@ func (h *Handler) LoginUser(c echo.Context) error {
 		var apiErr *response.APIError
 		if errors, ok := err.(*response.APIError); ok {
 			apiErr = errors
+			logger.Warn().
+				Msg("Login failed")
 			return response.Error(c, apiErr.Code, apiErr.Message, apiErr.Details)
 		}
+		logger.Error().Err(err).Msg("Internal server error during login")
 		return response.Error(c, http.StatusInternalServerError, "internal_server_error", err.Error())
 	}
+
+	logger.Info().
+		Msg("User logged in successfully")
 
 	return response.Success(c, http.StatusOK, "login_successful", result)
 }

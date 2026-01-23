@@ -24,11 +24,20 @@ import (
 	"github.com/martinmanurung/cinestream/internal/platform/queue"
 	storage "github.com/martinmanurung/cinestream/internal/platform/strorage"
 	"github.com/martinmanurung/cinestream/pkg/jwt"
+	"github.com/martinmanurung/cinestream/pkg/middleware"
 	customValidator "github.com/martinmanurung/cinestream/pkg/validator"
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 )
 
 func main() {
+	// Setup zerolog
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zlog.Logger = zlog.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339})
+
+	zlog.Info().Msg("Starting CineStream API Server...")
+
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -54,7 +63,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize MinIO: %v", err)
 	}
-	log.Println("MinIO initialized successfully")
+	zlog.Info().Msg("MinIO initialized successfully")
 
 	// Initialize Redis client
 	redisAddr := cfg.Redis.Host + ":" + cfg.Redis.Port
@@ -69,7 +78,7 @@ func main() {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 	defer redisClient.Close()
-	log.Println("Redis initialized successfully")
+	zlog.Info().Msg("Redis initialized successfully")
 
 	// Initialize services
 	storageService := storage.NewStorageService(minioClient, cfg.MinIO.BucketRaw, cfg.MinIO.BucketProcessed)
@@ -77,6 +86,7 @@ func main() {
 
 	// Initialize Echo
 	e := echo.New()
+	e.Use(middleware.RequestID())
 	e.HideBanner = false
 
 	// Register validator
@@ -124,9 +134,9 @@ func main() {
 			port = "8080"
 		}
 
-		log.Printf("Starting server on port %s", port)
+		zlog.Info().Str("port", port).Msg("Starting HTTP server")
 		if err := e.Start(":" + port); err != nil {
-			log.Printf("Server stopped: %v", err)
+			zlog.Info().Err(err).Msg("Server stopped")
 		}
 	}()
 
@@ -135,7 +145,7 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	zlog.Info().Msg("Shutting down server...")
 
 	// Gracefully shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -145,5 +155,5 @@ func main() {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("Server exited")
+	zlog.Info().Msg("Server exited successfully")
 }
