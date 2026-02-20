@@ -1,4 +1,7 @@
-.PHONY: goose_up goose_reset goose_create db_create run setup help api-build api-run worker-build worker-run worker-dev
+IMAGE_REGISTRY= rivmean0202
+APP_NAME = cinestream
+
+.PHONY: goose_up goose_reset goose_create db_create run setup help api-build api-run worker-build worker-run worker-dev build-image push
 
 # Database connection string
 DB_DSN := root:password@tcp(localhost:3306)/cinestream?parseTime=true
@@ -56,6 +59,13 @@ worker-dev:
 setup: db_create goose_up
 	@echo "Setup complete!"
 
+build-image:
+	podman build -t $(IMAGE_REGISTRY)/$(APP_NAME):latest .
+
+push-image:
+	podman push $(IMAGE_REGISTRY)/$(APP_NAME):latest
+
+
 # Help command
 help:
 	@echo "Available commands:"
@@ -70,3 +80,4 @@ help:
 	@echo "  make worker-run    - Build and run Worker service"
 	@echo "  make worker-dev    - Run Worker service in dev mode"
 	@echo "  make setup         - Create database and run migrations"
+	@echo "  make build-image   - Build Docker image"

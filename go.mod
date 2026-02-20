@@ -3,7 +3,6 @@ module github.com/martinmanurung/cinestream
 go 1.24.9
 
 require (
-	github.com/Ikhthus/api-ecommerce v0.0.0-20250625161827-788fa8d484b6
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/spf13/viper v1.19.0
